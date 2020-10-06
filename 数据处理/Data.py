@@ -5,6 +5,7 @@ Created on Tue Sep 29 10:06:33 2020
 @author: Ryan He
 """
 import Lexicon
+import time
 
 
 class Data:
@@ -59,7 +60,8 @@ class Data:
         index = 1
 
         for item in input_file:
-            if item != '':
+            # if item != '':
+            if len(item) >= 3:
                 label = item[2:]
                 if labels_dict.get(label, 0) == 0:
                     labels_dict[label] = index
@@ -69,9 +71,8 @@ class Data:
 
     def build_structured_data(self, input_file, words_dict):
         """
-        :param words_dict: 词典
-        :param input_file: 输入文件的列表形式
-        :return: 结构化的数据
+        :param words_dict: 词典 :param input_file: 输入文件的列表形式 :return: 结构化的数据, 数据结构为:
+        [sentence[[chars_list], [chars_index(自增)], [words_list(pair)], [words_index(lexicon)], [labels_list]]]
         """
         sentences = []
         max_length = 0
@@ -99,10 +100,12 @@ class Data:
         for sentence in sentences:
             temp = []
             chars_list = self.build_chars_list(sentence)
-            words_list, words_number = self.build_words_list(sentence, words_dict)
+            words_list, words_list_lexicon, words_number = self.build_words_list(sentence, words_dict)
             labels_list = self.build_labels_list(sentence)
             temp.append(chars_list)
+            temp.append(list(range(len(chars_list))))
             temp.append(words_list)
+            temp.append(words_list_lexicon)
             temp.append(labels_list)
             data.append(temp)
             if words_number > max_number:
@@ -128,22 +131,29 @@ class Data:
         :param words_dict: 词典
         :param input_sentence: 句子的列表形式
         :return: 返回包含所有在输入数据中出现的单词的列表, 列表的元素为(beg_index, end_index)
-                 其中beg_index是单词首字在chars_list中的位置, end_index是单词尾字在chars_list中的位置, 位置从1开始
+                 其中beg_index是单词首字在chars_list中的位置, end_index是单词尾字在chars_list中的位置, 位置从0开始
+                 返回单词在lexicon中的index组成的列表
                  返回句子包含的单词数
         """
         words_list = []
         sentence_str = ''
         for item in input_sentence:
             sentence_str += item[0]
-        raw_words = words_dict.match(sentence_str)
-        raw_words = list(set(raw_words))    # 消重
+        # raw_words, words_index = words_dict.match(sentence_str)
+        raw_words, words_list = words_dict.match(sentence_str)
+        # raw_words = list(set(raw_words))  # 消重
 
+        # for word in raw_words:
+        #     beg_index = self.chars_dict[word[0]]
+        #     end_index = self.chars_dict[word[-1]]
+        #     words_list.append((beg_index, end_index))
+        words_index = []
+        key_list = list(lex.word_dict.keys())
         for word in raw_words:
-            beg_index = self.chars_dict[word[0]]
-            end_index = self.chars_dict[word[-1]]
-            words_list.append((beg_index, end_index))
+            index = key_list.index(word)
+            words_index.append(index)
 
-        return words_list, len(raw_words)
+        return words_list, words_index, len(raw_words)
 
     def build_labels_list(self, input_sentence):
         """
@@ -153,7 +163,10 @@ class Data:
         labels_list = []
 
         for item in input_sentence:
-            index = self.labels_dict[item[2:]]
+            try:
+                index = self.labels_dict[item[2:]]
+            except KeyError:
+                index = self.labels_dict['O']
             labels_list.append(index)
 
         return labels_list
@@ -170,10 +183,15 @@ class Data:
 
 
 if __name__ == '__main__':
+    tic = time.time()
     print('测试Data类...')
     lex = Lexicon.Lexicon()
-    path = r'NERData\MSRA\msra_test_bio.txt'
+    print(1)
+    path = r'NERData\MSRA\msra_train_bio.txt'
     data = Data(path, lex)
     data.show_data_info()
     print(data.chars_dict, data.labels_dict, sep='\n')
-    print(data.data[0])
+    for i in data.data[0]:
+        print(i)
+    toc = time.time()
+    print('运行时间:', toc - tic)

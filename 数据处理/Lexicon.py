@@ -1,12 +1,25 @@
 # -*- coding: utf-8 -*-
-# @copyright Yue Yuanhao
+__author__ = "Yue Yuanhao"
+__copyright__ = "Copyright (C) 2020 Yue Yuanhao"
+__license__ = "Public Domain"
+__version__ = "1.5"
 
 import numpy as np
 import os
+from itertools import chain
+from pypinyin import pinyin, Style
 
+
+def to_pinyin(s):
+    '''
+    :param s: 字符串或列表
+    :type s: str or list
+    :return: 拼音字符串
+    '''
+    return ''.join(chain.from_iterable(pinyin(s, style=Style.TONE3)))
 
 class Lexicon:
-    def __init__(self, input_path='./dict/中文词典1.txt', saved_path='./save/lexicon_check.npy', save_path='./save'):
+    def __init__(self, input_path='./dict/中文词典2.txt', saved_path='./save/lexicon_check.npy', save_path='./save'):
         """
         :param input_path: 词典的路径
         """
@@ -14,7 +27,7 @@ class Lexicon:
         self.saved_path = saved_path
         self.save_path = save_path
         if os.path.isfile(saved_path):
-            self.word_dict = np.load(saved_path, allow_pickle='TRUE').item()
+            self.word_dict = np.load(saved_path, allow_pickle=True).item()
         else:
             self.word_dict = self.build_lexicon(self.input_path)
 
@@ -23,7 +36,8 @@ class Lexicon:
         :param input_path: 词典的路径
         :return: 返回word_dict
         """
-        file = open(input_path, 'r')
+        self.sort(input_path)
+        file = open(self.save_path+'/sorted_dictionary.txt', 'r')
         self.word_dict = dict()
         try:
             text = file.read().split()
@@ -50,7 +64,7 @@ class Lexicon:
         :return: 是否加载成功
         加载已保存词典
         """
-        self.word_dict = np.load(saved_path, allow_pickle='TRUE').item()
+        self.word_dict = np.load(saved_path, allow_pickle=True).item()
 
     def save_dictionary(self, save_path):
         """
@@ -83,6 +97,7 @@ class Lexicon:
         该函数将调用Lexicon.search(), 保留所有在输入序列中确实存在的词语，并将这些词语用来构建Data.words
         """
         word_list = []
+        pair_list = []
         if len(sentence) < 2:
             raise Exception("句子太短")
         length = len(sentence)
@@ -94,24 +109,34 @@ class Lexicon:
                     break
                 if code == 1:
                     word_list.append(cur_word)
+                    pair_list.append((loc, loc + step))
                     break
                 if code == 2:
                     word_list.append(cur_word)
+                    pair_list.append((loc, loc + step))
                     continue
                 if code == 3:
                     continue
-        return word_list
+        return word_list, pair_list
 
+    def sort(self,input_path):
+        file = open(input_path, 'r')
+        text = file.read().split()
+        file.close()
+        text.sort()
+        text=sorted(text, key=to_pinyin)
+        outfile=open(self.save_path+'/sorted_dictionary.txt', 'w')
+        for l in text:
+            outfile.write(l)
+            outfile.write('\n')
 
 if __name__=='__main__':
-    print('测试 Lexicon:')
-    lex=Lexicon()
-    input = '印度河流经印度'
-    out = lex.match(input)
-    #print('input: 在长江中下游平原')
-    #out=lex.match('在长江中下游平原')
-    #print('output: ',end='')
+    lex = Lexicon(input_path='./dict/中文词典2.txt', saved_path='./save/lexicon_check.npy', save_path='./save')
+    print('input: 在长江中下游平原')
+    out = lex.match('在长江中下游平原')
+    print('output: ', end='')
     print(out)
+    print(lex.word_dict)
 
 '''
 返回 0 1 2 3

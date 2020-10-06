@@ -136,7 +136,6 @@ if __name__=='__main__':
     out = lex.match('在长江中下游平原')
     print('output: ', end='')
     print(out)
-    print(lex.word_dict)
 
 '''
 返回 0 1 2 3
